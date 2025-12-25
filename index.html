@@ -1,0 +1,220 @@
+html
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>یارییا خائین - وەشانی بادینی</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1351&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.75);
+            max-width: 500px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        h1 { color: #2ecc71; text-shadow: 2px 2px 5px black; font-size: 32px; }
+
+        input, select, button {
+            padding: 12px;
+            margin: 10px;
+            border-radius: 12px;
+            border: none;
+            font-size: 16px;
+            width: 80%;
+        }
+
+        button {
+            background-color: #27ae60;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            width: auto;
+            padding: 12px 30px;
+        }
+
+        button:hover { background-color: #2ecc71; transform: scale(1.05); }
+
+        .player-list { list-style: none; padding: 0; }
+        .player-item { 
+            background: rgba(255,255,255,0.15); 
+            padding: 10px; 
+            margin: 8px 0; 
+            border-radius: 10px; 
+            display: flex; 
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hidden { display: none; }
+        
+        .card-display {
+            background: #f1c40f;
+            color: #2c3e50;
+            padding: 60px 20px;
+            border-radius: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            margin-top: 20px;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .category-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>یارییا خائینی 🕵️‍♂️</h1>
+    
+    <div id="setup-screen">
+        <div class="category-box">
+            <label>کەتیگۆریەکێ هەلبژێرە:</label>
+            <select id="category-select">
+                <option value="تەپاپێ">یاریزانێن تەپاپێ (ناڤدار)</option>
+                <option value="کەسایەتی">کەسایەتی و ناڤدار (Oliveira...)</option>
+                <option value="تشتێن_ناڤمال">تشتێن ناڤ مالێ</option>
+                <option value="خوارن">خوارنێن کوردی و جیهانی</option>
+                <option value="ئاژەڵ">ئاژەڵێن نیاس</option>
+                <option value="Random">تێکەل (هەمی پێکڤە)</option>
+            </select>
+        </div>
+
+        <div>
+            <input type="text" id="player-name" placeholder="ناڤێ هەڤالەکێ بنڤیسە...">
+            <button onclick="addPlayer()">زێدە بکە +</button>
+        </div>
+
+        <ul id="player-list-ui" class="player-list"></ul>
+        
+        <button id="start-btn" class="hidden" onclick="startGame()" style="background: #e67e22;">دەستپێکە! ▶️</button>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <h2 id="turn-name">---</h2>
+        <p id="instruction-text">مۆبایلێ بدە ڤی کەسی و کلیک ل سەر کارتێ بکە:</p>
+        
+        <div id="card" class="card-display" onclick="revealWord()">
+            نیشان بدە 👁️
+        </div>
+
+        <button id="next-player-btn" class="hidden" onclick="nextPlayer()">یێ دی لێ بدەت ⏭️</button>
+        <button id="finish-btn" class="hidden" onclick="resetGame()" style="background: #c0392b;">دوبارە دەستپێکرن 🔄</button>
+    </div>
+</div>
+
+<script>const data = {
+        "تەپاپێ": ["Messi", "Ronaldo", "Neymar", "Mbappe", "Benzema", "Modric", "Lewandowski", "Vinicius"],
+        "کەسایەتی": ["Charles Oliveira", "Elon Musk", "MrBeast", "Jackie Chan", "The Rock", "Spider-Man", "Batman"],
+        "تشتێن_ناڤمال": ["کورسی", "مێز", "قەنەفە", "تەلەفزیۆن", "سەلاجە", "سپلیت", "پەردە", "فرچێ ددانا"],
+        "خوارن": ["یاپراخ", "کفتە", "پیزا", "بەرگر", "بریانی", "شۆربە", "کباب", "مەقەلۆبە"],
+        "ئاژەڵ": ["شێر", "پڵنگ", "فیل", "کەرۆشک", "پێشی", "سە", "ئەسپ", "میمیک"]
+    };
+
+    let players = [];
+    let gameData = { imposterIndex: -1, word: "", currentIndex: 0 };
+
+    function addPlayer() {
+        const nameInput = document.getElementById('player-name');
+        const name = nameInput.value.trim();
+        if (name) {
+            players.push(name);
+            nameInput.value = '';
+            renderPlayers();
+        }
+    }
+
+    function renderPlayers() {
+        const list = document.getElementById('player-list-ui');
+        list.innerHTML = '';
+        players.forEach((p, index) => {
+            list.innerHTML += <li class="player-item"><span>${index + 1}. ${p}</span> <button onclick="removePlayer(${index})" style="background:#c0392b; padding:5px 10px; width:auto; margin:0;">لادان</button></li>;
+        });
+        document.getElementById('start-btn').classList.toggle('hidden', players.length < 3);
+    }
+
+    function removePlayer(index) {
+        players.splice(index, 1);
+        renderPlayers();
+    }
+
+    function startGame() {
+        const cat = document.getElementById('category-select').value;
+        let selectedList = [];
+        if (cat === "Random") {
+            Object.values(data).forEach(arr => selectedList.push(...arr));
+        } else {
+            selectedList = data[cat];
+        }
+
+        gameData.word = selectedList[Math.floor(Math.random() * selectedList.length)];
+        gameData.imposterIndex = Math.floor(Math.random() * players.length);
+        gameData.currentIndex = 0;
+
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        showTurn();
+    }
+
+    function showTurn() {
+        document.getElementById('turn-name').innerText = "نۆکا ( " + players[gameData.currentIndex] + " ) یە";
+        document.getElementById('card').innerText = "نیشان بدە 👁️";
+        document.getElementById('card').style.background = "#f1c40f";
+        document.getElementById('card').style.color = "#2c3e50";
+        document.getElementById('next-player-btn').classList.add('hidden');
+    }
+
+    function revealWord() {
+        const card = document.getElementById('card');
+        if (gameData.currentIndex === gameData.imposterIndex) {
+            card.innerText = "تو خائینی! 🤫\n(چ پەیڤ نینن)";
+            card.style.background = "#e74c3c";
+            card.style.color = "white";
+        } else {
+            card.innerText = "پەیڤ ئەڤەیە:\n" + gameData.word;
+            card.style.background = "#2ecc71";
+            card.style.color = "white";
+        }
+        
+        if (gameData.currentIndex < players.length - 1) {
+            document.getElementById('next-player-btn').classList.remove('hidden');
+        } else {
+            document.getElementById('finish-btn').classList.remove('hidden');
+        }
+    }
+
+    function nextPlayer() {
+        gameData.currentIndex++;
+        showTurn();
+    }
+
+    function resetGame() {
+        if(confirm("د پشتباستی کو دێ یارییێ دوبارە کەی؟")) {
+            location.reload();
+        }
+    }
+function resetGame() {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('setup-screen').classList.remove('hidden');
+    }
+</script>
+
+</body>
+</html>
